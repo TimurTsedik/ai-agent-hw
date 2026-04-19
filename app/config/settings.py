@@ -1,9 +1,17 @@
 """Loaded from environment / .env — OLLAMA_MODEL is the source of truth for the model name."""
 
+from enum import StrEnum
 from pathlib import Path
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class SystemPromptPreset(StrEnum):
+    """Which system prompt template PromptBuilder uses."""
+
+    DEFAULT = "default"
+    AUTONOMOUS = "autonomous"
 
 
 class Settings(BaseSettings):
@@ -22,6 +30,7 @@ class Settings(BaseSettings):
     max_http_response_chars: int = 5000
     max_file_size_bytes: int = 1048576
     workspace_path: Path = Path("./workspace")
+    system_prompt_preset: SystemPromptPreset = SystemPromptPreset.DEFAULT
 
     @field_validator("workspace_path", mode="before")
     @classmethod

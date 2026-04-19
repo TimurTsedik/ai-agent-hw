@@ -26,22 +26,16 @@ class ResponseParser:
         return ret
 
     def _parse_dict(self, data: dict[str, Any]) -> ActionResponse | FinalResponse:
-        has_final = "final_answer" in data
-        has_action = "action" in data
-        if has_final and has_action:
-            msg = "Model output must not mix final_answer and action"
-            raise InvalidJsonResponseError(msg)
-        if has_final:
+        # LLMs often add extra keys; a string final_answer ends the turn (even with action/thought).
+        if "final_answer" in data:
             fa = data["final_answer"]
-            if not isinstance(fa, str):
-                msg = "final_answer must be a string"
+            if isinstance(fa, str):
+                ret = FinalResponse(final_answer=fa)
+                return ret
+            if fa is not None:
+                msg = "final_answer must be a string or null"
                 raise InvalidJsonResponseError(msg)
-            if len(data) != 1:
-                msg = "final_answer object must only contain final_answer"
-                raise InvalidJsonResponseError(msg)
-            ret = FinalResponse(final_answer=fa)
-            return ret
-        if has_action:
+        if "action" in data:
             thought = data.get("thought")
             action = data.get("action")
             args = data.get("args")

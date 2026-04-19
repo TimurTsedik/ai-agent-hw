@@ -48,7 +48,10 @@ def build_agent(settings: Settings) -> AgentRunner:
         ("readFile", {"path": "string"}),
         ("httpGet", {"url": "string"}),
     ]
-    prompt_builder = PromptBuilder(tool_specs)
+    prompt_builder = PromptBuilder(
+        tool_specs,
+        preset=settings.system_prompt_preset,
+    )
     parser = ResponseParser()
     llm = OllamaClient(
         base_url=str(settings.ollama_base_url),

@@ -4,6 +4,7 @@ import json
 import logging
 import unittest
 
+from app.config.settings import SystemPromptPreset
 from app.domain.protocols.llm_client_protocol import LlmClientProtocol
 from app.infrastructure.tools.calculator_tool import CalculatorTool
 from app.services.agent_runner import AgentRunner
@@ -41,7 +42,7 @@ class TestAgentRunner(unittest.TestCase):
         specs: list[tuple[str, dict[str, str]]] = [
             ("calculator", {"expression": "string"}),
         ]
-        return PromptBuilder(specs)
+        return PromptBuilder(specs, preset=SystemPromptPreset.DEFAULT)
 
     def test_finishes_on_final_answer(self) -> None:
         llm: LlmClientProtocol = StubLlm([json.dumps({"final_answer": "ok"})])

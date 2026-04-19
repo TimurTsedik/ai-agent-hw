@@ -36,10 +36,27 @@ class TestResponseParser(unittest.TestCase):
         with self.assertRaises(InvalidJsonResponseError):
             self.parser.parse(raw)
 
-    def test_mixed_final_and_action(self) -> None:
-        raw = '{"final_answer": "a", "action": "calculator"}'
-        with self.assertRaises(InvalidJsonResponseError):
-            self.parser.parse(raw)
+    def test_mixed_final_and_action_prefers_final(self) -> None:
+        """Models often emit redundant keys; a string final_answer ends the turn."""
+        raw = '{"thought": "done", "action": "calculator", "final_answer": "Страница открыта."}'
+        out = self.parser.parse(raw)
+        self.assertIsInstance(out, FinalResponse)
+        self.assertEqual(out.final_answer, "Страница открыта.")
+
+    def test_final_answer_with_extra_keys(self) -> None:
+        raw = '{"thought": "ok", "final_answer": "result"}'
+        out = self.parser.parse(raw)
+        self.assertIsInstance(out, FinalResponse)
+        self.assertEqual(out.final_answer, "result")
+
+    def test_null_final_answer_falls_through_to_action(self) -> None:
+        raw = (
+            '{"thought": "t", "action": "calculator", "args": {"expression": "1+1"}, '
+            '"final_answer": null}'
+        )
+        out = self.parser.parse(raw)
+        self.assertIsInstance(out, ActionResponse)
+        self.assertEqual(out.action, "calculator")
 
 
 if __name__ == "__main__":

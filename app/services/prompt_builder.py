@@ -4,47 +4,66 @@ from __future__ import annotations
 
 import json
 
+from app.config.settings import SystemPromptPreset
 from app.domain.entities.agent_step import AgentStep
+from app.services.system_prompt_templates import (
+    AUTONOMOUS_PROMPT_TEMPLATE,
+    DEFAULT_PROMPT_TEMPLATE,
+    TOOLS_DESCRIPTION_PLACEHOLDER,
+)
 
 
 class PromptBuilder:
     """Assembles system rules, tool specs, history, and the user task."""
 
-    def __init__(self, tool_descriptions: list[tuple[str, dict[str, str]]]) -> None:
+    def __init__(
+        self,
+        tool_descriptions: list[tuple[str, dict[str, str]]],
+        preset: SystemPromptPreset = SystemPromptPreset.DEFAULT,
+    ) -> None:
         self._tool_descriptions = tool_descriptions
+        self._preset = preset
 
     def build(self, user_task: str, previous_steps: list[AgentStep]) -> str:
-        sections: list[str] = [
-            "You are a step-by-step AI agent with tools.",
-            "On every step respond with ONLY a single JSON object and NOTHING else.",
-            "No markdown fences. No keys except those defined below.",
-            "Either choose a tool (thought + action + args) OR finish (final_answer).",
-            "Use a tool when you need external data or computation.",
-            "When you have enough information, return final_answer.",
-            "",
-            "JSON format 1 — tool:",
-            json.dumps(
-                {
-                    "thought": "why you take this step",
-                    "action": "toolName",
-                    "args": {"key": "value"},
-                },
-                ensure_ascii=False,
-            ),
-            "",
-            "JSON format 2 — finish:",
-            json.dumps({"final_answer": "answer text"}, ensure_ascii=False),
-            "",
-            "Available tools:",
-        ]
+        if self._preset == SystemPromptPreset.AUTONOMOUS:
+            ret = self._build_autonomous()
+        else:
+            ret = self._build_default()
+        ret = self._append_history_and_task(ret, user_task, previous_steps)
+        return ret
+
+    def _build_tools_description(self) -> str:
+        lines: list[str] = []
         idx = 1
         for name, arg_schema in self._tool_descriptions:
-            sections.append(f"{idx}. {name}")
-            sections.append("Args (JSON shape):")
-            sections.append(json.dumps(arg_schema, ensure_ascii=False, indent=2))
+            lines.append(f"{idx}. {name}")
+            lines.append("Args (JSON shape):")
+            lines.append(json.dumps(arg_schema, ensure_ascii=False, indent=2))
             idx += 1
-            sections.append("")
-        sections.append("Previous steps:")
+            lines.append("")
+        ret = "\n".join(lines).rstrip()
+        return ret
+
+    def _apply_tools_placeholder(self, template: str) -> str:
+        tools_block = self._build_tools_description()
+        ret = template.replace(TOOLS_DESCRIPTION_PLACEHOLDER, tools_block)
+        return ret
+
+    def _build_default(self) -> str:
+        ret = self._apply_tools_placeholder(DEFAULT_PROMPT_TEMPLATE)
+        return ret
+
+    def _build_autonomous(self) -> str:
+        ret = self._apply_tools_placeholder(AUTONOMOUS_PROMPT_TEMPLATE)
+        return ret
+
+    def _append_history_and_task(
+        self,
+        prefix: str,
+        user_task: str,
+        previous_steps: list[AgentStep],
+    ) -> str:
+        sections: list[str] = [prefix, "", "Previous steps:"]
         if not previous_steps:
             sections.append("(none)")
         else:

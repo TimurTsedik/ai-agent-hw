@@ -26,6 +26,17 @@ cp .env.example .env
 
 Отредактируйте `.env` при необходимости (особенно `OLLAMA_MODEL`).
 
+Системный промпт выбирается переменной **`SYSTEM_PROMPT_PRESET`**:
+
+- `default` — короткая инструкция из исходной спеки (по умолчанию);
+- `autonomous` — расширенный текст с циклом агента, правилами и плейсхолдером списка инструментов (см. `app/services/system_prompt_templates.py`).
+
+Пример:
+
+```text
+SYSTEM_PROMPT_PRESET=autonomous
+```
+
 ## Ollama и модель
 
 1. Установите Ollama по инструкции с официального сайта.
